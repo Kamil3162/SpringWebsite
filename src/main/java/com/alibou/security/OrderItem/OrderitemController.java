@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @CrossOrigin(origins = "*")
@@ -37,9 +38,11 @@ public class OrderitemController {
         for (Orderitem order : orders) {
             OrderitemResponse orderitemResponse = new OrderitemResponse();
             orderitemResponse.setOrder(order.getOrder().getId());
+            orderitemResponse.setId(order.getId());
             orderitemResponse.setProduct(order.getProduct().getId());
             orderitemResponse.setPrice(order.getPrice());
             orderitemResponse.setQuantity(order.getQuantity());
+            orderitemResponse.setProduct_name(order.getProduct().getName());
             finalOrders.add(orderitemResponse);
         }
 
@@ -48,10 +51,6 @@ public class OrderitemController {
 
     @PostMapping("orderitems")
     public ResponseEntity<Orderitem> saveOrderitem(@RequestBody OrderitemRequest orderitemRequest) {
-        System.out.print(orderitemRequest.getProduct());
-        System.out.print(orderitemRequest.getOrder());
-        System.out.print(orderitemRequest.getQuantity());
-        System.out.print(orderitemRequest.getPrice());
         Product product = productRepository.findById(orderitemRequest.getProduct()).get();
         if (product != null) {
             OrderCustomer order = orderCustomerRepository.findById(orderitemRequest.getOrder()).get();
@@ -69,12 +68,41 @@ public class OrderitemController {
     }
 
     @GetMapping("orderitems/{id}")
-    public Orderitem getOrderitemById(@PathVariable("id") Long id) {
-        return orderitemService.getOrderitemById(id);
+    public ResponseEntity<OrderitemResponse> getOrderitemById(@PathVariable("id") Long id){
+        Orderitem orderitem = orderitemService.getOrderitemById(id);
+        if (orderitem != null) {
+            OrderitemResponse orderitemResponse = new OrderitemResponse();
+            orderitemResponse.setId(orderitem.getId());
+            orderitemResponse.setOrder(orderitem.getOrder().getId());
+            orderitemResponse.setPrice(orderitem.getProduct().getPrice());
+            orderitemResponse.setProduct(orderitem.getProduct().getId());
+            orderitemResponse.setQuantity(orderitem.getQuantity());
+            orderitemResponse.setProduct_name(orderitem.getProduct().getName());
+            return ResponseEntity.ok(orderitemResponse);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @PostMapping("orderitems/{id}")
+    public ResponseEntity<Orderitem> modifyOrderById(@PathVariable("id") Long id,
+                                                     @RequestBody OrderitemRequest orderitemRequest){
+        Orderitem orderitem = orderitemService.getOrderitemById(id);
+        if (orderitem != null) {
+            int quantity = orderitemRequest.getQuantity();
+            orderitem.setQuantity(quantity);
+            orderitemRepository.save(orderitem);
+            return ResponseEntity.ok(null);
+        }
+        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("orderitems/{id}")
-    public void deleteOrderitemById(@PathVariable("id") Long id) {
-        orderitemService.deleteOrderitemById(id);
+    public ResponseEntity<String> deleteOrderitemById(@PathVariable("id") Long id) {
+        Orderitem orderitem = orderitemService.getOrderitemById(id);
+        if (orderitem != null) {
+            orderitemService.deleteOrderitemById(id);
+            return ResponseEntity.ok(null);
+        }
+        return ResponseEntity.notFound().build();
     }
 }
